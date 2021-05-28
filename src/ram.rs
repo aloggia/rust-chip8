@@ -1,6 +1,6 @@
 pub struct Ram {
     // The chip 8 architecture has ram composed of 4096 8 but addresses
-    mem: [u8; 4096]
+    mem: [u8; 4096],
 }
 
 impl Ram {
