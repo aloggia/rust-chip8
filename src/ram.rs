@@ -30,15 +30,13 @@ impl Ram {
 
             // i is an interating position in memory used to load the sprites into mem starting at
             // position 0, that is what the nested for loop does
-            let mut i = 0;
-            for sprite in sprites.iter() {
-                for ch in sprite {
-                    ram.mem[i] = *ch;
-                    i += 1;
-                }
+        let mut i = 0;
+        for sprite in sprites.iter() {
+            for ch in sprite {
+                ram.mem[i] = *ch;
+                i += 1;
             }
-
-        print!("RAM: {:?}", ram.mem);
+        }
         ram
     }
     // pretty much just getters & setters for memory

@@ -7,7 +7,7 @@ use std::io::Read;
 use chip8::Chip8;
 
 fn main() {
-    let mut file = File::open("data/GUESS").unwrap();
+    let mut file = File::open("data/INVADERS").unwrap();
     let mut data = Vec::<u8>::new();
     file.read_to_end(&mut data);
 
