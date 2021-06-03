@@ -1,6 +1,9 @@
 mod ram;
 mod chip8;
 mod cpu;
+mod bus;
+mod display;
+mod keyboard;
 
 use std::fs::File;
 use std::io::Read;

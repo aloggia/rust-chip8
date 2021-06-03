@@ -45,9 +45,8 @@ impl Ram {
         self.mem[address as usize] = value;
     }
     // read_byte takes in an address and a value, and sets value to the value currently in address
-    pub fn read_byte(&mut self, address: u16) -> u8 {
-        let mut value = self.mem[address as usize];
-        return value;
+    pub fn read_byte(&self, address: u16) -> u8 {
+        self.mem[address as usize]
     }
 
 }

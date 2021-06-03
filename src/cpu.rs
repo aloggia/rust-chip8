@@ -1,6 +1,7 @@
-use crate::ram::Ram;
+use crate::bus::Bus;
 use std::fmt;
 use std::fmt::Formatter;
+use std::borrow::Borrow;
 
 pub const PROGRAM_START: u16 = 0x200;
 
@@ -9,7 +10,8 @@ pub struct Cpu {
     vx: [u8; 16],
     pc: u16,
     i: u16,
-    prev_pc: u16
+    prev_pc: u16,
+    ret_stack: Vec<u16>
 }
 
 impl Cpu {
@@ -19,16 +21,17 @@ impl Cpu {
             pc: PROGRAM_START,
             i: 0,
             prev_pc: 0,
+            ret_stack: Vec::<u16>::new()
         }
     }
     // Function that reads a single instruction then increments the program counter by 2
     // Because each instruction takes 2 bytes, we want to increment the program counter by 2 after each instr
-    pub fn run_instruction(&mut self, ram: &mut Ram) {
+    pub fn run_instruction(&mut self, bus: &mut Bus) {
 
         // Read the first byte in the instruction
-        let hi = ram.read_byte(self.pc) as u16;
+        let hi = bus.ram_read_byte(self.pc) as u16;
         // Read the second byte in the instruction
-        let lo = ram.read_byte(self.pc + 1) as u16;
+        let lo = bus.ram_read_byte(self.pc + 1) as u16;
         // Create one instr of both bytes
         let instr: u16 = (hi << 8) | lo;
 
@@ -53,6 +56,12 @@ impl Cpu {
                 // jmp to nnn
                 self.pc = nnn;
             },
+            0x2 => {
+                // Call subroutine at nnn
+                self.ret_stack.push(self.pc + 2);
+                self.pc = nnn;
+
+            },
             0x3 => {
                 // if(Vx == nn)
                 let vx = self.read_reg_vx(x);
@@ -73,6 +82,39 @@ impl Cpu {
                 self.write_reg_vx(x, vx.wrapping_add(nn));
                 self.pc += 2;
             },
+            0x8 => {
+                match n {
+                    0 => {
+                        // set VX = VY
+                        let vy = self.read_reg_vx(y);
+                        self.write_reg_vx(x, vy);
+                        self.pc += 2;
+                    },
+                    1 => {
+
+                    },
+                    2 => {
+
+                    },
+                    3 => {
+
+                    },
+                    4 => {
+
+                    },
+                    5 => {
+
+                    },
+                    6 => {
+
+                    },
+                    7 => {
+
+                    },
+
+                    _ => panic!("Unrecognized '0x8XY*' instruction: {:#X}, {:#X}", self.pc, instr)
+                }
+            },
             0xA => {
                 // set i to nnn
                 self.i = nnn;
@@ -80,8 +122,26 @@ impl Cpu {
             },
             0xD => {
                 // draw sprite at location x, y
-                self.debug_draw_sprite(ram, x, y,n);
+                self.debug_draw_sprite(bus, x, y,n);
                 self.pc += 2;
+            },
+            0xE => {
+                match nn {
+                    0x9E => {
+
+                    },
+                    0xA1 => {
+                        // skip the next instr if the key stored in isnt pressed
+                        let key = self.read_reg_vx(x);
+                        if bus.key_pressed(key) {
+                            self.pc += 2;
+                        } else {
+                            self.pc += 4;
+                        }
+
+                    }
+                    _ => panic!("Unrecognized '0xEX**' instruction: {:#X}, {:#X}", self.pc, instr)
+                }
             },
             0xF => {
                 // i += Vx
@@ -94,26 +154,28 @@ impl Cpu {
         }
 
     }
-    pub fn debug_draw_sprite(&self, ram: &mut Ram, x: u8, y: u8,  height: u8) {
+    pub fn debug_draw_sprite(&mut self, bus: &mut Bus, x: u8, y: u8, height: u8) {
         println!("Drawing sprite at ({}, {})", x, y);
+        let mut should_set_vf = false;
         for y in 0..height {
-            let mut b = ram.read_byte(self.i + y as u16);
-            for _ in 0..8 {
-                match (b & 0b1000_0000) >> 7 {
-                    0 => print!("_"),
-                    1 => print!("#"),
-                    _ => unreachable!()
-                }
-                b = b << 1;
+            let b = bus.ram_read_byte(self.i + y as u16);
+            if bus.debug_draw_byte(b, x, y) {
+                should_set_vf = true;
             }
-            print!("\n");
+            bus.debug_draw_byte(b, x, y);
         }
-
-        print!("\n");
+        if should_set_vf {
+            self.write_reg_vx(0xF, 1)
+        } else {
+            self.write_reg_vx(0xF, 0);
+        }
+        bus.present_screen();
     }
+
     pub fn write_reg_vx(&mut self, index: u8, value: u8) {
         self.vx[index as usize] = value;
     }
+
     pub fn read_reg_vx(&mut self, index: u8) -> u8 {
         self.vx[index as usize]
     }
