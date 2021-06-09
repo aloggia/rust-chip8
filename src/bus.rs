@@ -52,10 +52,13 @@ impl Bus {
     pub fn get_delay_timer(&self) -> u8 {
         self.delay_timer
     }
+    pub fn get_display_buffer(&self) -> &[u8] {
+        self.display.get_display_buffer()
+    }
 }
 
 impl fmt::Debug for Bus {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        write!(f, "\ndelay timer: {:?}", self.delay_timer)
+        write!(f, " delay timer: {:?}", self.delay_timer)
     }
 }

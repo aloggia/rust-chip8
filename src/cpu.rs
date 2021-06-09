@@ -161,7 +161,9 @@ impl Cpu {
             },
             0xD => {
                 // draw sprite at location x, y
-                self.debug_draw_sprite(bus, x, y,n);
+                let vx = self.read_reg_vx(x);
+                let vy = self.read_reg_vx(y);
+                self.debug_draw_sprite(bus, vx, vy,n);
                 self.pc += 2;
             },
             0xE => {
@@ -193,11 +195,16 @@ impl Cpu {
                 match nn {
                     0x07 => {
                         // Set VX to the value of the delay timer
-                        self.write_reg_vx(x, bus.get_delay_timer())
-                    }
+                        self.write_reg_vx(x, bus.get_delay_timer());
+                        self.pc += 2;
+                    },
+                    0x0A => {
+
+                    },
                     0x15 => {
                         // set the delay timer to VX
                         bus.set_delay_timer(self.read_reg_vx(x));
+                        self.pc += 2;
                     },
                     0x65 => {
                         // Fill V0 to VX with values from memory starting at location I
@@ -205,16 +212,18 @@ impl Cpu {
                             let value = bus.ram_read_byte(self.i + index as u16);
                             self.write_reg_vx(index, value);
                         }
+                        self.pc += 2;
                     },
                     0x1E => {
                         // i += Vx
                         let vx = self.read_reg_vx(x);
                         self.i += vx as u16;
+                        self.pc += 2;
                     }
 
                     _ => panic!("Unrecognized '0xFX**' instruction: {:#X}, {:#X}", self.pc, instr)
                 }
-                self.pc += 2;
+
             },
 
             _ => panic!("Unrecognized instruction: {:#X}, {:#X}", self.pc, instr)

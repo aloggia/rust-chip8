@@ -28,4 +28,8 @@ impl Chip8 {
         println!("CPU state: {:?}", self.cpu);
         println!("Bus state: {:?}", self.bus)
     }
+
+    pub fn get_display_buffer(&self) -> &[u8]{
+        self.bus.get_display_buffer()
+    }
 }
