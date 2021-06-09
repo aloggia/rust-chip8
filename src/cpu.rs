@@ -3,6 +3,7 @@ use std::fmt;
 use std::fmt::Formatter;
 use std::borrow::Borrow;
 
+
 pub const PROGRAM_START: u16 = 0x200;
 
 //#[derive(Debug)]
@@ -52,6 +53,21 @@ impl Cpu {
         self.prev_pc = self.pc;
 
         match (instr & 0xF000) >> 12 {
+            0x0 => {
+                match nn {
+                    0xE0 => {
+                        // Clear screen
+                        bus.clear_screen();
+                        self.pc += 2;
+                    }
+                    0xEE => {
+                        // Return from suproutine
+                        let addr = self.ret_stack.pop().unwrap();
+                        self.pc = addr;
+                    }
+                    _ => panic!("Unrecognized '0x00*' instruction: {:#X}, {:#X}", self.pc, instr)
+                }
+            },
             0x1 => {
                 // jmp to nnn
                 self.pc = nnn;
@@ -83,29 +99,51 @@ impl Cpu {
                 self.pc += 2;
             },
             0x8 => {
+                let vx = self.read_reg_vx(x);
+                let vy = self.read_reg_vx(y);
                 match n {
                     0 => {
                         // set VX = VY
-                        let vy = self.read_reg_vx(y);
                         self.write_reg_vx(x, vy);
-                        self.pc += 2;
                     },
                     1 => {
-
+                        // set VX to VX or VY (bitwise or)
+                        self.write_reg_vx(x, vx | vy);
                     },
                     2 => {
-
+                        // set VX to VX and VY (bitwise and)
+                        self.write_reg_vx(x, vx & vy);
                     },
                     3 => {
-
+                        // set VX to VX xor VY (bitwise xor)
+                        self.write_reg_vx(x, vx ^ vy);
                     },
                     4 => {
-
+                        // add VY to VX, VF is set to 1 if there is a carry, set VF to 0 otherwise
+                        let sum: u16 = vx as u16 + vy as u16;
+                        self.write_reg_vx(x, sum as u8);
+                        if sum > 0xFF {
+                            self.write_reg_vx(0xF, 1);
+                        } else {
+                            self.write_reg_vx(0xF, 0);
+                        }
                     },
                     5 => {
-
+                        // subtract VY from VX, VF is set to 0 when theres a borrow, and 1 otherwise
+                        let diff: i8 = vx as i8 - vy as i8;
+                        self.write_reg_vx(x, diff as u8);
+                        if diff < 0 {
+                            self.write_reg_vx(0xF, 1);
+                        } else {
+                            self.write_reg_vx(0xF, 0);
+                        }
                     },
                     6 => {
+                        // bit shift VY right one and copy that result into VX
+                        // VF is set to the least significant bit in VY BEFORE the shift
+                        self.write_reg_vx(0xF, vy & 0x1);
+                        self.write_reg_vx(y, vy >> 1);
+                        self.write_reg_vx(x, vy >> 1);
 
                     },
                     7 => {
@@ -114,6 +152,7 @@ impl Cpu {
 
                     _ => panic!("Unrecognized '0x8XY*' instruction: {:#X}, {:#X}", self.pc, instr)
                 }
+                self.pc += 2;
             },
             0xA => {
                 // set i to nnn
@@ -126,17 +165,24 @@ impl Cpu {
                 self.pc += 2;
             },
             0xE => {
+                //TODO: clean up this code: they do almost the same thing
                 match nn {
                     0x9E => {
-
+                        // skip the next instr if the key stored in is pressed
+                        let key = self.read_reg_vx(x);
+                        if bus.key_pressed(key) {
+                            self.pc += 4;
+                        } else {
+                            self.pc += 2;
+                        }
                     },
                     0xA1 => {
                         // skip the next instr if the key stored in isnt pressed
                         let key = self.read_reg_vx(x);
-                        if bus.key_pressed(key) {
-                            self.pc += 2;
-                        } else {
+                        if !bus.key_pressed(key) {
                             self.pc += 4;
+                        } else {
+                            self.pc += 2;
                         }
 
                     }
@@ -144,11 +190,32 @@ impl Cpu {
                 }
             },
             0xF => {
-                // i += Vx
-                let vx = self.read_reg_vx(x);
-                self.i += vx as u16;
+                match nn {
+                    0x07 => {
+                        // Set VX to the value of the delay timer
+                        self.write_reg_vx(x, bus.get_delay_timer())
+                    }
+                    0x15 => {
+                        // set the delay timer to VX
+                        bus.set_delay_timer(self.read_reg_vx(x));
+                    },
+                    0x65 => {
+                        // Fill V0 to VX with values from memory starting at location I
+                        for index in 0..x {
+                            let value = bus.ram_read_byte(self.i + index as u16);
+                            self.write_reg_vx(index, value);
+                        }
+                    },
+                    0x1E => {
+                        // i += Vx
+                        let vx = self.read_reg_vx(x);
+                        self.i += vx as u16;
+                    }
+
+                    _ => panic!("Unrecognized '0xFX**' instruction: {:#X}, {:#X}", self.pc, instr)
+                }
                 self.pc += 2;
-            }
+            },
 
             _ => panic!("Unrecognized instruction: {:#X}, {:#X}", self.pc, instr)
         }
@@ -183,8 +250,7 @@ impl Cpu {
 
 impl fmt::Debug for Cpu {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-
-        write!(f, "{:#X}\n", self.pc);
+        write!(f, "\n{:#X}\n", self.pc);
         write!(f, "vx: ");
         for item in self.vx.iter() {
             write!(f, "{:#X}", *item);

@@ -49,4 +49,11 @@ impl Display {
             print!("\n")
         }
     }
+    pub fn clear(&mut self) {
+        for y in 0..HEIGHT {
+            for x in 0..WIDTH {
+                self.screen[y][x] = 0;
+            }
+        }
+    }
 }
