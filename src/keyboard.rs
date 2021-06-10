@@ -9,7 +9,7 @@ impl Keyboard {
     }
     //TODO: implement correct key handling
     pub fn key_pressed(&self, key_code: u8) -> bool {
-        if key_code != 4 {
+        if key_code != 4 && key_code != 6 {
             false
         } else {
             true

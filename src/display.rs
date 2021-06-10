@@ -13,8 +13,8 @@ impl Display {
         }
     }
 
-    fn get_index_from_coords(x: usize, y: usize) -> usize {
-        y * HEIGHT + x
+    pub fn get_index_from_coords(x: usize, y: usize) -> usize {
+        y * WIDTH + x
     }
 
     pub fn debug_draw_byte(&mut self, byte: u8, x: u8, y: u8) -> bool {
@@ -45,7 +45,7 @@ impl Display {
     pub fn present(&self) {
         for index in 0..self.screen.len() {
             let pixel = self.screen[index];
-            if (index / HEIGHT) % WIDTH == 0 {
+            if index % WIDTH == 0 {
                 print!("\n")
             }
 
