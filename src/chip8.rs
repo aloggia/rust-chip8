@@ -1,7 +1,6 @@
 use crate::cpu::Cpu;
 use crate::cpu;
 use crate::bus::Bus;
-use minifb::Window;
 
 pub struct Chip8 {
     bus: Bus,
@@ -23,10 +22,9 @@ impl Chip8 {
     }
 
     pub fn run_instruction(&mut self) {
-        self.bus.tick();
         self.cpu.run_instruction(&mut self.bus);
-        println!("CPU state: {:?}", self.cpu);
-        println!("Bus state: {:?}", self.bus)
+        // println!("CPU state: {:?}", self.cpu);
+        // println!("Bus state: {:?}", self.bus)
     }
 
     pub fn get_display_buffer(&self) -> &[u8]{
