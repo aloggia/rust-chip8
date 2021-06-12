@@ -3,6 +3,7 @@ use crate::keyboard::Keyboard;
 use crate::ram::Ram;
 use std::fmt;
 use std::fmt::Formatter;
+use minifb::Window;
 
 pub struct Bus {
     ram: Ram,
@@ -40,6 +41,12 @@ impl Bus {
     }
     pub fn key_pressed(&self, key_code: u8) -> bool {
         self.keyboard.key_pressed(key_code)
+    }
+    pub fn set_key_pressed(&mut self, key: Option<u8>) {
+        self.keyboard.set_key_pressed(key)
+    }
+    pub fn get_key_pressed(&self) -> Option<u8> {
+        self.keyboard.get_key_pressed()
     }
     pub fn tick(&mut self) {
         if self.delay_timer > 0 {

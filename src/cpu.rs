@@ -11,7 +11,6 @@ pub struct Cpu {
     vx: [u8; 16],
     pc: u16,
     i: u16,
-    prev_pc: u16,
     ret_stack: Vec<u16>
 }
 
@@ -21,7 +20,6 @@ impl Cpu {
             vx: [0; 16],
             pc: PROGRAM_START,
             i: 0,
-            prev_pc: 0,
             ret_stack: Vec::<u16>::new()
         }
     }
@@ -47,10 +45,7 @@ impl Cpu {
         println!("nnn: {:?}, nn: {:?}, n: {:?}, x: {:?}, y:{:?}", nnn, nn, n, x, y);
 
         // Error checking to make sure the pc is incremented after each instruction
-        if self.prev_pc == self.pc {
-            panic!("Increment pc!");
-        }
-        self.prev_pc = self.pc;
+
 
         match (instr & 0xF000) >> 12 {
             0x0 => {
@@ -61,7 +56,7 @@ impl Cpu {
                         self.pc += 2;
                     }
                     0xEE => {
-                        // Return from suproutine
+                        // Return from subroutine
                         let addr = self.ret_stack.pop().unwrap();
                         self.pc = addr;
                     }
@@ -179,7 +174,7 @@ impl Cpu {
                         }
                     },
                     0xA1 => {
-                        // skip the next instr if the key stored in isnt pressed
+                        // skip the next instr if the key stored in isn't pressed
                         let key = self.read_reg_vx(x);
                         if !bus.key_pressed(key) {
                             self.pc += 4;
@@ -199,7 +194,15 @@ impl Cpu {
                         self.pc += 2;
                     },
                     0x0A => {
-
+                        // Wait for a key press, then store it in VX
+                        let key = bus.get_key_pressed();
+                        match key {
+                            Some(val) => {
+                                self.write_reg_vx(x, key.unwrap());
+                                self.pc += 2;
+                            }
+                            None => ()
+                        }
                     },
                     0x15 => {
                         // set the delay timer to VX
@@ -245,7 +248,6 @@ impl Cpu {
         } else {
             self.write_reg_vx(0xF, 0);
         }
-        bus.present_screen();
     }
 
     pub fn write_reg_vx(&mut self, index: u8, value: u8) {
